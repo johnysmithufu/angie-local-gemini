@@ -1,6 +1,6 @@
-# Angie Demo - SEO MCP Tools Plugin
+# Angie Demo - Local AI Edition
 
-This standalone WordPress plugin demonstrates how to create external MCP (Model Context Protocol) tools for the Angie AI assistant.
+A standalone, privacy-focused version of Angie that runs MCP tools locally using Google Gemini.
 
 ## Overview
 
@@ -8,7 +8,13 @@ This plugin exposes tools through REST API endpoints that can be consumed by Ang
 
 ## Usage in Angie
 
-Once the plugin is active and the MCP server is registered in Angie's gateway, users can:
+Once the plugin is active, users can:
+
+1. Click the blue sparkle icon in the bottom right of your WP Admin.
+2. Enter your Google Gemini API Key in the settings.
+3. Start chatting!
+
+Examples:
 
 1. Ask: "Please improve the SEO of this page"
 2. Ask: "Create a portfolio post type"
@@ -58,19 +64,6 @@ Each of these examples demonstrates different WordPress tasks:
    - URL: `http://localhost:8888/wp-admin`
    - Username: `admin`
    - Password: `password`
-
-3. **Configure Angie:**
-   - Go to Angie → Settings → Allow external scripts
-   - Enable the setting to allow external scripts
-
-### Testing the Demo
-
-Once the external scripts are approved, you can test the tools by asking Angie:
-
-- **"Please improve the SEO of this page"** - Analyzes current page SEO
-- **"Create a portfolio post type"** - Creates custom WordPress post types  
-- **"Let's celebrate"** - Runs a fireworks animation on the screen
-- **"Check my site's security"** - Performs security analysis
 
 ### Stopping the Environment
 
