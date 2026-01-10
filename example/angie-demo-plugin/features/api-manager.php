@@ -13,7 +13,7 @@ class Angie_Demo_Api_Manager {
 			'permission_callback' => [ $this, 'permissions_check' ],
 		] );
 
-		// NEW: Route to proxy the request to Gemini
+		// Route to proxy the request to Gemini
 		register_rest_route( Angie_Demo_Plugin::REST_NAMESPACE, '/generate', [
 			'methods'             => 'POST',
 			'callback'            => [ $this, 'proxy_generate' ],
@@ -47,15 +47,16 @@ class Angie_Demo_Api_Manager {
 			return new WP_Error( 'missing_key', 'API Key not found. Please check settings.', [ 'status' => 400 ] );
 		}
 
-		$body = $request->get_json_params();
+		// CRITICAL FIX: Get raw body string to preserve empty objects "{}"
+		// PHP json_decode/encode roundtrip converts "{}" -> [] (array) -> "[]", which breaks Gemini.
+		$raw_body = $request->get_body();
 
-		// Using gemini-2.0-flash as requested
 		$url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' . $api_key;
 
 		$response = wp_remote_post( $url, [
-			'body'    => json_encode( $body ),
+			'body'    => $raw_body, // Send raw string
 			'headers' => [ 'Content-Type' => 'application/json' ],
-			'timeout' => 60, // Increased timeout for 2.0 reasoning
+			'timeout' => 60,
 		] );
 
 		if ( is_wp_error( $response ) ) {
