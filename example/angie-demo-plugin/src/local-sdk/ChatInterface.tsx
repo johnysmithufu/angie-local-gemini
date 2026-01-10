@@ -15,8 +15,13 @@ export const ChatInterface = ({ controller }: { controller: LocalHostController 
     const [messages, setMessages] = useState<any[]>([]);
     const [input, setInput] = useState("");
     const [isTyping, setIsTyping] = useState(false);
-    const [showSettings, setShowSettings] = useState(false);
-    const [apiKey, setApiKey] = useState((window as any).angieLocalSettings?.apiKey || '');
+
+    // Check if key exists on server, default to showing settings if false
+    const settings = (window as any).angieLocalSettings;
+    const [hasKey, setHasKey] = useState(settings?.hasApiKey || false);
+    const [showSettings, setShowSettings] = useState(!settings?.hasApiKey);
+
+    const [apiKeyInput, setApiKeyInput] = useState("");
 
     const msgEndRef = useRef<HTMLDivElement>(null);
 
@@ -40,16 +45,20 @@ export const ChatInterface = ({ controller }: { controller: LocalHostController 
     };
 
     const saveKey = async () => {
-        controller.updateApiKey(apiKey);
-        await fetch((window as any).angieLocalSettings.root + 'angie-demo/v1/save-key', {
+        // controller.updateApiKey(apiKeyInput); // Not needed for proxy, PHP handles it
+
+        await fetch(settings.root + 'angie-demo/v1/save-key', {
             method: 'POST',
             headers: {
-                'X-WP-Nonce': (window as any).angieLocalSettings.nonce,
+                'X-WP-Nonce': settings.nonce,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ key: apiKey })
+            body: JSON.stringify({ key: apiKeyInput })
         });
+
+        setHasKey(true);
         setShowSettings(false);
+        setApiKeyInput(""); // Clear input for security
     };
 
     if (!isOpen) {
@@ -88,8 +97,9 @@ export const ChatInterface = ({ controller }: { controller: LocalHostController 
                     <label style={{display:'block', marginBottom: 5, fontSize: 12, fontWeight: 600}}>Google Gemini API Key</label>
                     <input
                         type="password"
-                        value={apiKey}
-                        onChange={e => setApiKey(e.target.value)}
+                        value={apiKeyInput}
+                        onChange={e => setApiKeyInput(e.target.value)}
+                        placeholder={hasKey ? "Key is set (enter to update)" : "AIzaSy..."}
                         style={{width: '100%', padding: '8px', marginBottom: 12, border: '1px solid #8c8f94', borderRadius: 4}}
                     />
                     <button onClick={saveKey} style={{background: COLORS.primary, color:'white', border:'none', padding:'6px 16px', borderRadius: 4, cursor:'pointer'}}>Save</button>
