@@ -2,7 +2,7 @@
 /**
 * Plugin Name: Angie Demo - Local AI Edition
 * Description: A standalone, privacy-focused version of Angie that runs MCP tools locally using Google Gemini.
-* Version: 2.0.0
+* Version: 2.0.1
 * Author: Elementor.com
 * Plugin URI: https://elementor.com/
 */
@@ -19,11 +19,8 @@ require_once plugin_dir_path( __FILE__ ) . 'features/api-manager.php';
 
 class Angie_Demo_Plugin {
 
-    const VERSION = '2.0.0';
+    const VERSION = '2.0.1';
     const REST_NAMESPACE = 'angie-demo/v1';
-
-    // Constants for option names (to match feature files if they use them)
-    const POST_TYPES_OPTION = 'angie_demo_post_types';
 
     private $seo_analyzer;
     private $post_type_manager;
@@ -71,11 +68,12 @@ class Angie_Demo_Plugin {
         $user_id = get_current_user_id();
         $api_key = get_user_meta( $user_id, 'angie_gemini_api_key', true );
 
+        // SECURE CHANGE: We do NOT send 'apiKey' anymore.
         wp_localize_script( 'angie-demo-local', 'angieLocalSettings', [
-            'root'     => esc_url_raw( rest_url() ),
-            'nonce'    => wp_create_nonce( 'wp_rest' ),
-            'apiKey'   => $api_key ? $api_key : '',
-            'userName' => wp_get_current_user()->display_name,
+            'root'      => esc_url_raw( rest_url() ),
+            'nonce'     => wp_create_nonce( 'wp_rest' ),
+            'hasApiKey' => ! empty( $api_key ), // Boolean flag for UI state
+            'userName'  => wp_get_current_user()->display_name,
         ] );
     }
 

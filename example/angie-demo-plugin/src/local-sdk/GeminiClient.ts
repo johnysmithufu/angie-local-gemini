@@ -1,57 +1,34 @@
 /**
  * Gemini Client
- * Handles communication with Google's Generative Language API.
- * Includes schema sanitization to prevent "Unknown name" errors.
+ * Routes requests through the WordPress Backend to avoid CORS/CSP issues.
  */
 export class GeminiClient {
-    private apiKey: string;
-    private baseUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
-
-    constructor(key: string) {
-        this.apiKey = key;
-    }
+    // We don't need to store the key in the client anymore; the PHP side handles it.
+    constructor(key: string) {}
 
     setKey(key: string) {
-        this.apiKey = key;
+        // No-op for client-side, but kept for interface compatibility
     }
 
-    /**
-     * Recursive function to strip fields that Gemini API rejects
-     * ($schema, additionalProperties, etc.)
-     */
     private cleanSchema(schema: any): any {
-        if (typeof schema !== 'object' || schema === null) {
-            return schema;
-        }
-
-        // Create a shallow copy
+        if (typeof schema !== 'object' || schema === null) return schema;
         const clean = { ...schema };
-
-        // Remove forbidden keys
         delete clean.$schema;
         delete clean.additionalProperties;
-
-        // Specific fix for Zod 'optional' logic which sometimes adds 'anyOf' with null
-        // Gemini prefers 'nullable: true' or just standard types, but usually standard sanitization is enough.
-
-        // Recurse into 'properties'
         if (clean.properties) {
             for (const key in clean.properties) {
                 clean.properties[key] = this.cleanSchema(clean.properties[key]);
             }
         }
-
-        // Recurse into 'items' (for arrays)
-        if (clean.items) {
-            clean.items = this.cleanSchema(clean.items);
-        }
-
+        if (clean.items) clean.items = this.cleanSchema(clean.items);
         return clean;
     }
 
     async generate(history: any[], tools: any[]): Promise<{ text: string, toolCalls?: any[] }> {
-        if (!this.apiKey) {
-            throw new Error("API Key is missing. Check Settings.");
+        // Get WP settings from window
+        const settings = (window as any).angieLocalSettings;
+        if (!settings || !settings.root || !settings.nonce) {
+            throw new Error("WordPress settings missing. Cannot connect to backend.");
         }
 
         const contents = history.map(msg => {
@@ -80,27 +57,45 @@ export class GeminiClient {
             };
         });
 
-        // Map MCP Tools to Gemini Schema AND sanitize them
         const toolsPayload = tools.length > 0 ? [{
             function_declarations: tools.map(t => ({
                 name: t.name,
                 description: t.description,
-                parameters: this.cleanSchema(t.inputSchema) // <--- SANITIZATION APPLIED HERE
+                parameters: this.cleanSchema(t.inputSchema)
             }))
         }] : undefined;
 
-        const response = await fetch(`${this.baseUrl}?key=${this.apiKey}`, {
+        // Call our local PHP Proxy
+        // URL: /wp-json/angie-demo/v1/generate
+        // Ensure root has trailing slash
+        const root = settings.root.endsWith('/') ? settings.root : settings.root + '/';
+        const url = `${root}angie-demo/v1/generate`;
+
+        const response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-WP-Nonce': settings.nonce
+            },
             body: JSON.stringify({ contents, tools: toolsPayload })
         });
 
-        const data = await response.json();
+        let data;
+        try {
+            data = await response.json();
+        } catch (e) {
+             throw new Error("Failed to parse response from server. Check PHP logs.");
+        }
 
+        // Handle WordPress specific errors
+        if (data.code && data.message && data.data?.status) {
+            throw new Error(`WordPress Error: ${data.message}`);
+        }
+
+        // Handle Gemini specific errors forwarded by PHP
         if (data.error) {
-            // Log the full error to console for easier debugging if it happens again
             console.error("Gemini API Error:", JSON.stringify(data.error, null, 2));
-            throw new Error(data.error.message);
+            throw new Error(data.error.message || "Unknown API Error");
         }
 
         const candidate = data.candidates?.[0]?.content;
