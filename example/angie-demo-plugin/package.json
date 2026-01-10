@@ -1,26 +1,28 @@
 {
-  "name": "angie-demo",
-  "version": "1.0.3",
-  "description": "This standalone WordPress plugin demonstrates how to create external MCP (Model Context Protocol) tools for the Angie AI assistant, specifically focusing on SEO analysis capabilities.",
-  "main": "demo-mcp-server.js",
+  "name": "angie-demo-local",
+  "version": "2.0.0",
+  "description": "Local AI Assistant for WordPress using Gemini",
+  "main": "src/demo-mcp-server.ts",
   "scripts": {
     "build": "tsc && vite build",
-    "dev": "vite dev",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "wp-env start",
-    "patch": "npm version patch && git add package.json package-lock.json && git commit -m \"Bump version to $(npm pkg get version | tr -d '\\\"')\" && git push"
-  },
-  "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "typescript": "^5.8.2",
-    "vite": "^6.3.5",
-    "@wordpress/env": "^10.25.0"
+    "dev": "vite",
+    "start": "wp-env start"
   },
   "dependencies": {
-    "@elementor/angie-sdk": "1.0.0",
-    "@modelcontextprotocol/sdk": "^1.13.0",
+    "@modelcontextprotocol/sdk": "^1.0.1",
     "fireworks-js": "^2.10.8",
-    "zod": "^3.25.67"
+    "lucide-react": "^0.300.0",
+    "markdown-to-jsx": "^7.4.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "@vitejs/plugin-react": "^4.2.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.12",
+    "@wordpress/env": "^9.0.0"
   }
 }
