@@ -27,14 +27,20 @@ jobs:
     - name: Build React/Vite Bundle
       run: npm run build
 
-    - name: Prepare ZIP
+    - name: Cleanup Dev Files
+      # Remove node_modules and src to make the zip small and clean
       run: |
-        cd ..
-        # Zip the plugin folder, excluding dev files
-        zip -r angie-local-ai.zip angie-demo-plugin -x "*/node_modules/*" "*/src/*" "*/.git/*"
+        rm -rf node_modules
+        rm -rf src
+        rm -rf .git
+        rm -rf .gitignore
+        rm -rf tsconfig.json
+        rm -rf vite.config.ts
+        rm -rf package.json
+        rm -rf package-lock.json
 
     - name: Upload Plugin Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: angie-local-ai-plugin
-        path: example/angie-local-ai.zip
+        name: angie-local-ai
+        path: example/angie-demo-plugin/
