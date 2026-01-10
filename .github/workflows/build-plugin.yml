@@ -1,0 +1,40 @@
+name: Build Plugin
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: example/angie-demo-plugin
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Build React/Vite Bundle
+      run: npm run build
+
+    - name: Prepare ZIP
+      run: |
+        cd ..
+        # Zip the plugin folder, excluding dev files
+        zip -r angie-local-ai.zip angie-demo-plugin -x "*/node_modules/*" "*/src/*" "*/.git/*"
+
+    - name: Upload Plugin Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: angie-local-ai-plugin
+        path: example/angie-local-ai.zip
