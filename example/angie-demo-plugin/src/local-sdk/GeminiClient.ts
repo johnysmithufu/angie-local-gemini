@@ -1,13 +1,14 @@
 /**
  * Gemini Client
- * Routes requests through the WordPress Backend to avoid CORS/CSP issues.
+ * Routes requests through the WordPress Backend.
+ * Supports dynamic model selection.
  */
 export class GeminiClient {
-    // We don't need to store the key in the client anymore; the PHP side handles it.
+    // Key is handled by backend
     constructor(key: string) {}
 
     setKey(key: string) {
-        // No-op for client-side, but kept for interface compatibility
+        // No-op for client-side
     }
 
     private cleanSchema(schema: any): any {
@@ -24,11 +25,10 @@ export class GeminiClient {
         return clean;
     }
 
-    async generate(history: any[], tools: any[]): Promise<{ text: string, toolCalls?: any[] }> {
-        // Get WP settings from window
+    async generate(history: any[], tools: any[], model: string = 'gemini-2.5-flash'): Promise<{ text: string, toolCalls?: any[] }> {
         const settings = (window as any).angieLocalSettings;
         if (!settings || !settings.root || !settings.nonce) {
-            throw new Error("WordPress settings missing. Cannot connect to backend.");
+            throw new Error("WordPress settings missing.");
         }
 
         const contents = history.map(msg => {
@@ -65,11 +65,9 @@ export class GeminiClient {
             }))
         }] : undefined;
 
-        // Call our local PHP Proxy
-        // URL: /wp-json/angie-demo/v1/generate
-        // Ensure root has trailing slash
+        // Pass model as query param to PHP proxy
         const root = settings.root.endsWith('/') ? settings.root : settings.root + '/';
-        const url = `${root}angie-demo/v1/generate`;
+        const url = `${root}angie-demo/v1/generate?model=${encodeURIComponent(model)}`;
 
         const response = await fetch(url, {
             method: 'POST',
@@ -84,15 +82,13 @@ export class GeminiClient {
         try {
             data = await response.json();
         } catch (e) {
-             throw new Error("Failed to parse response from server. Check PHP logs.");
+             throw new Error("Failed to parse response from server.");
         }
 
-        // Handle WordPress specific errors
         if (data.code && data.message && data.data?.status) {
             throw new Error(`WordPress Error: ${data.message}`);
         }
 
-        // Handle Gemini specific errors forwarded by PHP
         if (data.error) {
             console.error("Gemini API Error:", JSON.stringify(data.error, null, 2));
             throw new Error(data.error.message || "Unknown API Error");

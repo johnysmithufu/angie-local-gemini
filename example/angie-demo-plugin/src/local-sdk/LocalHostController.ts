@@ -54,11 +54,13 @@ export class LocalHostController {
         this.notify('TOOLS_UPDATED', this.tools);
     }
 
-    public async processMessage(history: any[], userMessage: string): Promise<any[]> {
+    // Accepts 'model' argument now
+    public async processMessage(history: any[], userMessage: string, model: string = 'gemini-2.5-flash'): Promise<any[]> {
         const newHistory = [...history, { role: 'user', content: userMessage }];
 
         try {
-            const llmResponse = await this.geminiClient.generate(newHistory, this.tools);
+            // Step 1: Query Gemini (Pass model)
+            const llmResponse = await this.geminiClient.generate(newHistory, this.tools, model);
 
             if (llmResponse.toolCalls && llmResponse.toolCalls.length > 0) {
                 newHistory.push({
@@ -87,7 +89,8 @@ export class LocalHostController {
                     }
                 }
 
-                const finalResponse = await this.geminiClient.generate(newHistory, []);
+                // Step 2: Summary (Pass model)
+                const finalResponse = await this.geminiClient.generate(newHistory, [], model);
                 newHistory.push({ role: 'model', content: finalResponse.text });
             } else {
                 newHistory.push({ role: 'model', content: llmResponse.text });
@@ -95,7 +98,7 @@ export class LocalHostController {
 
             return newHistory;
         } catch (e: any) {
-            newHistory.push({ role: 'model', content: `**Error:** ${e.message}.` });
+            newHistory.push({ role: 'model', content: `**Error:** ${e.message}` });
             return newHistory;
         }
     }

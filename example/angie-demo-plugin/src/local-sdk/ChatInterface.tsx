@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { LocalHostController } from './LocalHostController';
-import { Send, X, Settings, Sparkles, Wrench } from 'lucide-react';
+import { Send, X, Settings, Sparkles, Wrench, RefreshCw } from 'lucide-react';
 import Markdown from 'markdown-to-jsx';
 
 const COLORS = {
@@ -16,16 +16,46 @@ export const ChatInterface = ({ controller }: { controller: LocalHostController 
     const [input, setInput] = useState("");
     const [isTyping, setIsTyping] = useState(false);
 
-    // Check if key exists on server, default to showing settings if false
+    // Settings State
     const settings = (window as any).angieLocalSettings;
     const [hasKey, setHasKey] = useState(settings?.hasApiKey || false);
     const [showSettings, setShowSettings] = useState(!settings?.hasApiKey);
-
     const [apiKeyInput, setApiKeyInput] = useState("");
+
+    // Model State
+    const [models, setModels] = useState<string[]>([]);
+    const [selectedModel, setSelectedModel] = useState(localStorage.getItem('angie_model') || 'gemini-2.5-flash');
+    const [loadingModels, setLoadingModels] = useState(false);
 
     const msgEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => { msgEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isTyping]);
+
+    // Load models when settings open
+    useEffect(() => {
+        if (showSettings && hasKey) {
+            fetchModels();
+        }
+    }, [showSettings, hasKey]);
+
+    const fetchModels = async () => {
+        setLoadingModels(true);
+        try {
+            const res = await fetch(settings.root + 'angie-demo/v1/models', {
+                headers: { 'X-WP-Nonce': settings.nonce }
+            });
+            const data = await res.json();
+            if (data.models) {
+                // Prioritize flash models, simpler sort
+                const list = data.models.map((m: any) => m.name).sort();
+                setModels(list);
+            }
+        } catch (e) {
+            console.error("Failed to fetch models");
+        } finally {
+            setLoadingModels(false);
+        }
+    };
 
     const handleSend = async () => {
         if (!input.trim() || isTyping) return;
@@ -35,30 +65,42 @@ export const ChatInterface = ({ controller }: { controller: LocalHostController 
         setMessages(prev => [...prev, { role: 'user', content: userText }]);
 
         try {
-            const updatedHistory = await controller.processMessage(messages, userText);
+            // Pass the selected model
+            const updatedHistory = await controller.processMessage(messages, userText, selectedModel);
             setMessages(updatedHistory);
         } catch (error) {
             console.error(error);
+            setMessages(prev => [...prev, { role: 'model', content: `Error: ${error instanceof Error ? error.message : 'Unknown error'}` }]);
         } finally {
             setIsTyping(false);
         }
     };
 
     const saveKey = async () => {
-        // controller.updateApiKey(apiKeyInput); // Not needed for proxy, PHP handles it
+        try {
+            const res = await fetch(settings.root + 'angie-demo/v1/save-key', {
+                method: 'POST',
+                headers: {
+                    'X-WP-Nonce': settings.nonce,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ key: apiKeyInput })
+            });
 
-        await fetch(settings.root + 'angie-demo/v1/save-key', {
-            method: 'POST',
-            headers: {
-                'X-WP-Nonce': settings.nonce,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ key: apiKeyInput })
-        });
+            if (!res.ok) throw new Error("Failed to save key");
 
-        setHasKey(true);
-        setShowSettings(false);
-        setApiKeyInput(""); // Clear input for security
+            setHasKey(true);
+            setApiKeyInput("");
+            fetchModels(); // Fetch models immediately after saving key
+        } catch (e) {
+            alert("Failed to save API Key");
+        }
+    };
+
+    const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const val = e.target.value;
+        setSelectedModel(val);
+        localStorage.setItem('angie_model', val);
     };
 
     if (!isOpen) {
@@ -93,16 +135,41 @@ export const ChatInterface = ({ controller }: { controller: LocalHostController 
             </div>
 
             {showSettings && (
-                <div style={{padding: 20, background: '#f8f9fa', borderBottom: `1px solid ${COLORS.border}`}}>
+                <div style={{padding: 20, background: '#f8f9fa', borderBottom: `1px solid ${COLORS.border}`, maxHeight: '50%', overflowY: 'auto'}}>
                     <label style={{display:'block', marginBottom: 5, fontSize: 12, fontWeight: 600}}>Google Gemini API Key</label>
-                    <input
-                        type="password"
-                        value={apiKeyInput}
-                        onChange={e => setApiKeyInput(e.target.value)}
-                        placeholder={hasKey ? "Key is set (enter to update)" : "AIzaSy..."}
-                        style={{width: '100%', padding: '8px', marginBottom: 12, border: '1px solid #8c8f94', borderRadius: 4}}
-                    />
-                    <button onClick={saveKey} style={{background: COLORS.primary, color:'white', border:'none', padding:'6px 16px', borderRadius: 4, cursor:'pointer'}}>Save</button>
+                    <div style={{display:'flex', gap: 5, marginBottom: 15}}>
+                        <input
+                            type="password"
+                            value={apiKeyInput}
+                            onChange={e => setApiKeyInput(e.target.value)}
+                            placeholder={hasKey ? "Key is set" : "AIzaSy..."}
+                            style={{width: '100%', padding: '8px', border: '1px solid #8c8f94', borderRadius: 4, flex: 1}}
+                        />
+                        <button onClick={saveKey} style={{background: COLORS.primary, color:'white', border:'none', padding:'0 12px', borderRadius: 4, cursor:'pointer'}}>Save</button>
+                    </div>
+
+                    {hasKey && (
+                        <>
+                            <div style={{display:'flex', justifyContent:'space-between', marginBottom: 5}}>
+                                <label style={{fontSize: 12, fontWeight: 600}}>AI Model</label>
+                                <RefreshCw size={12} style={{cursor:'pointer', opacity:0.7}} onClick={fetchModels}/>
+                            </div>
+                            <select
+                                value={selectedModel}
+                                onChange={handleModelChange}
+                                disabled={loadingModels}
+                                style={{width: '100%', padding: '8px', border: '1px solid #8c8f94', borderRadius: 4}}
+                            >
+                                <option value="gemini-2.5-flash">gemini-2.5-flash (Default)</option>
+                                {models.filter(m => m !== 'gemini-2.5-flash').map(m => (
+                                    <option key={m} value={m}>{m}</option>
+                                ))}
+                            </select>
+                            <p style={{fontSize: 11, color:'#666', marginTop: 5}}>
+                                Note: Some models may require billing enabled or have different rate limits.
+                            </p>
+                        </>
+                    )}
                 </div>
             )}
 
@@ -111,6 +178,7 @@ export const ChatInterface = ({ controller }: { controller: LocalHostController 
                     <div style={{textAlign:'center', color:'#888', marginTop: 80}}>
                         <Sparkles size={48} color="#ddd" />
                         <p>How can I help you?</p>
+                        <span style={{fontSize: 11, background: '#f0f0f1', padding: '2px 6px', borderRadius: 4}}>Model: {selectedModel}</span>
                     </div>
                 )}
                 {messages.map((m, i) => (
