@@ -2,7 +2,7 @@
 /**
 * Plugin Name: Angie Demo - Local AI Edition
 * Description: A standalone, privacy-focused version of Angie that runs MCP tools locally using Google Gemini.
-* Version: 2.0.4
+* Version: 2.0.5
 * Author: Elementor.com
 * Plugin URI: https://elementor.com/
 */
@@ -15,13 +15,13 @@ exit;
 require_once plugin_dir_path( __FILE__ ) . 'features/seo-analyzer.php';
 require_once plugin_dir_path( __FILE__ ) . 'features/post-type-manager.php';
 require_once plugin_dir_path( __FILE__ ) . 'features/security-checker.php';
-require_once plugin_dir_path( __FILE__ ) . 'features/user-profile-settings.php'; // <--- NEW FILE
+require_once plugin_dir_path( __FILE__ ) . 'features/user-profile-settings.php';
 require_once plugin_dir_path( __FILE__ ) . 'features/api-manager.php';
 require_once plugin_dir_path( __FILE__ ) . 'features/analytics-logger.php';
 
 class Angie_Demo_Plugin {
 
-const VERSION = '2.0.4';
+const VERSION = '2.0.5';
 const REST_NAMESPACE = 'angie/v1';
 
 const POST_TYPES_OPTION = 'angie_demo_post_types';
@@ -29,7 +29,7 @@ const POST_TYPES_OPTION = 'angie_demo_post_types';
 private $seo_analyzer;
 private $post_type_manager;
 private $security_checker;
-private $user_profile_settings; // <--- NEW PROPERTY
+private $user_profile_settings;
 private $api_manager;
 
 public function __construct() {
@@ -43,15 +43,13 @@ private function load_features() {
 $this->seo_analyzer      = new Angie_Demo_SEO_Analyzer();
 $this->post_type_manager = new Angie_Demo_Post_Type_Manager();
 $this->security_checker  = new Angie_Demo_Security_Checker();
-$this->user_profile_settings = new Angie\Features\UserProfileSettings(); // <--- INIT NEW FEATURE
+$this->user_profile_settings = new Angie\Features\UserProfileSettings();
 $this->api_manager       = new Angie\Features\ApiManager();
 }
 
 public function render_app_root() {
 if ( current_user_can( 'manage_options' ) ) {
-            // This is where the React App mounts.
-            // If the CSS is missing, this div (and its children) will sit in the footer flow.
-            // Ensure you have applied the CSS fix from the previous step to float it!
+            // Unique container for React to mount into
 echo '<div id="angie-local-root"></div>';
 }
 }
@@ -62,7 +60,12 @@ return;
 }
 
 $script_url = plugin_dir_url( __FILE__ ) . 'out/angie-demo.js';
-        $style_url = plugin_dir_url( __FILE__ ) . 'out/angie-demo.css';
+
+        // FIX: Ensure we look for the correct CSS file name (usually matches entry or generic style.css)
+        // We try 'angie-demo.css' first (Vite default for named entry), then fallback.
+        $style_url = file_exists( plugin_dir_path( __FILE__ ) . 'out/angie-demo.css' )
+            ? plugin_dir_url( __FILE__ ) . 'out/angie-demo.css'
+            : plugin_dir_url( __FILE__ ) . 'out/style.css';
 
 $ver = file_exists( plugin_dir_path( __FILE__ ) . 'out/angie-demo.js' )
 ? filemtime( plugin_dir_path( __FILE__ ) . 'out/angie-demo.js' )
@@ -76,8 +79,8 @@ $ver,
 true
 );
 
-        // Ensure CSS is enqueued to prevent "squeezed in footer" look
-        if ( file_exists( plugin_dir_path( __FILE__ ) . 'out/angie-demo.css' ) ) {
+        // Enqueue CSS
+        if ( file_exists( plugin_dir_path( __FILE__ ) . 'out/angie-demo.css' ) || file_exists( plugin_dir_path( __FILE__ ) . 'out/style.css' ) ) {
             wp_enqueue_style(
                 'angie-demo-style',
                 $style_url,
@@ -86,8 +89,10 @@ true
             );
         }
 
+        // FIX: Remove trailing slash from rest_url() to prevent double-slash issues (//)
+        // which can cause 301 redirects that strip POST data.
 wp_localize_script( 'angie-demo-local', 'angieConfig', [
-'apiBaseUrl' => esc_url_raw( rest_url() ),
+'apiBaseUrl' => untrailingslashit( rest_url() ),
 'nonce'      => wp_create_nonce( 'wp_rest' ),
 ] );
 }
