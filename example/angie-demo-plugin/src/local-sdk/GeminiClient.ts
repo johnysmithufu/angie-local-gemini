@@ -1,15 +1,12 @@
 /**
  * Gemini Client
  * Routes requests through the WordPress Backend.
- * Supports dynamic model selection.
+ * Supports dynamic model selection and robust empty-object handling.
  */
 export class GeminiClient {
-    // Key is handled by backend
     constructor(key: string) {}
 
-    setKey(key: string) {
-        // No-op for client-side
-    }
+    setKey(key: string) {}
 
     private cleanSchema(schema: any): any {
         if (typeof schema !== 'object' || schema === null) return schema;
@@ -47,7 +44,12 @@ export class GeminiClient {
                 return {
                     role: 'model',
                     parts: msg.toolCalls.map((tc: any) => ({
-                        functionCall: { name: tc.name, args: tc.args }
+                        functionCall: {
+                            name: tc.name,
+                            // CRITICAL FIX: Ensure args is an object, never an array.
+                            // PHP json_decode converts {} -> [], so we must revert it here.
+                            args: (tc.args && !Array.isArray(tc.args)) ? tc.args : {}
+                        }
                     }))
                 };
             }
@@ -65,7 +67,6 @@ export class GeminiClient {
             }))
         }] : undefined;
 
-        // Pass model as query param to PHP proxy
         const root = settings.root.endsWith('/') ? settings.root : settings.root + '/';
         const url = `${root}angie-demo/v1/generate?model=${encodeURIComponent(model)}`;
 
