@@ -16,11 +16,12 @@ require_once plugin_dir_path( __FILE__ ) . 'features/seo-analyzer.php';
 require_once plugin_dir_path( __FILE__ ) . 'features/post-type-manager.php';
 require_once plugin_dir_path( __FILE__ ) . 'features/security-checker.php';
 require_once plugin_dir_path( __FILE__ ) . 'features/api-manager.php';
+require_once plugin_dir_path( __FILE__ ) . 'features/analytics-logger.php';
 
 class Angie_Demo_Plugin {
 
 	const VERSION = '2.0.2';
-	const REST_NAMESPACE = 'angie-demo/v1';
+	const REST_NAMESPACE = 'angie/v1'; // Updated namespace to match new code
 
 	// RESTORED CONSTANT
 	const POST_TYPES_OPTION = 'angie_demo_post_types';
@@ -41,11 +42,13 @@ class Angie_Demo_Plugin {
 		$this->seo_analyzer      = new Angie_Demo_SEO_Analyzer();
 		$this->post_type_manager = new Angie_Demo_Post_Type_Manager();
 		$this->security_checker  = new Angie_Demo_Security_Checker();
-		$this->api_manager       = new Angie_Demo_Api_Manager();
+		$this->api_manager       = new Angie\Features\ApiManager(); // Updated namespace/class usage
 	}
 
 	public function render_app_root() {
 		if ( current_user_can( 'manage_options' ) ) {
+            // New entry point expects 'angie-root' but safely checks for 'angie-local-root' too.
+            // Using 'angie-local-root' to be safe with CSS or legacy references.
 			echo '<div id="angie-local-root"></div>';
 		}
 	}
@@ -68,14 +71,10 @@ class Angie_Demo_Plugin {
 			true
 		);
 
-		$user_id = get_current_user_id();
-		$api_key = get_user_meta( $user_id, 'angie_gemini_api_key', true );
-
-		wp_localize_script( 'angie-demo-local', 'angieLocalSettings', [
-			'root'      => esc_url_raw( rest_url() ),
-			'nonce'     => wp_create_nonce( 'wp_rest' ),
-			'hasApiKey' => ! empty( $api_key ), // Boolean flag for UI state
-			'userName'  => wp_get_current_user()->display_name,
+        // Updated localization to 'angieConfig' as expected by demo-mcp-server.tsx
+		wp_localize_script( 'angie-demo-local', 'angieConfig', [
+			'apiBaseUrl' => esc_url_raw( rest_url() ),
+			'nonce'      => wp_create_nonce( 'wp_rest' ),
 		] );
 	}
 
@@ -83,7 +82,10 @@ class Angie_Demo_Plugin {
 		$this->seo_analyzer->register_rest_routes();
 		$this->post_type_manager->register_rest_routes();
 		$this->security_checker->register_rest_routes();
-		$this->api_manager->register_rest_routes();
+        // ApiManager registers its own routes in its constructor/init
+		// $this->api_manager->register_rest_routes();
+        // NOTE: The new ApiManager uses add_action('rest_api_init') in its constructor.
+        // So we don't need to call it manually here.
 	}
 }
 

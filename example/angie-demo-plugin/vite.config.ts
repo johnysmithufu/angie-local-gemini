@@ -7,14 +7,18 @@ export default defineConfig({
     outDir: 'out',
     emptyOutDir: true,
     lib: {
-      entry: './src/demo-mcp-server.ts',
+      entry: './src/demo-mcp-server.tsx', // Updated entry point
       name: 'AngieDemo',
       fileName: () => 'angie-demo.js',
       formats: ['iife'],
     },
     rollupOptions: {
       output: {
-        globals: {}
+        globals: {
+           // If we need to exclude react from bundle and use WP's, we would do it here.
+           // But package.json has react as dependency, not devDependency/peer.
+           // So we bundle it.
+        }
       }
     },
     minify: true,
