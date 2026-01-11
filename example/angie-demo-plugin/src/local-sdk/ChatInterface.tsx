@@ -54,8 +54,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ apiBaseUrl, nonce 
         }
     };
 
-    // 2. Save Settings Handler
+    // 2. Save Settings Handler - IMPROVED ERROR HANDLING
     const handleSaveSettings = async () => {
+        if (!apiKey.trim()) {
+            alert("Please enter an API Key");
+            return;
+        }
+
         try {
             const res = await fetch(`${apiBaseUrl}/angie/v1/config/save`, {
                 method: 'POST',
@@ -69,10 +74,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ apiBaseUrl, nonce 
                 clientRef.current = new GeminiClient('server_side_key', apiBaseUrl, nonce);
                 setMessages([{ role: 'model', content: "I'm ready! How can I help you with WordPress today?" }]);
             } else {
-                alert("Failed to save API key.");
+                // Parse error message if possible
+                const errData = await res.json().catch(() => ({}));
+                console.error("Save Error:", errData);
+                alert(`Failed to save API key. Server responded with: ${res.status} ${errData.message || res.statusText}`);
             }
         } catch (e) {
-            alert("Error saving settings.");
+            console.error(e);
+            alert("Network error saving settings. Check console for details.");
         }
     };
 
@@ -100,7 +109,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ apiBaseUrl, nonce 
 
     const takeScreenshot = async () => {
         try {
-            // Updated to ignore the new floating window class
             const canvas = await html2canvas(document.body, { ignoreElements: (el) => el.classList.contains('angie-floating-window') });
             setCapturedImage(canvas.toDataURL('image/jpeg', 0.6));
         } catch (e) { console.error(e); }

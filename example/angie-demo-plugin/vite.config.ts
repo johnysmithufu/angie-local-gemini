@@ -15,8 +15,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         assetFileNames: (assetInfo) => {
-          if (assetInfo.name === 'style.css') return 'angie-demo.css';
-          return assetInfo.name;
+          // Force all CSS to be named angie-demo.css to match PHP enqueue
+          if (assetInfo.name && assetInfo.name.endsWith('.css')) {
+             return 'angie-demo.css';
+          }
+          return assetInfo.name || 'asset-[name]';
         },
         globals: {
            // If we need to exclude react from bundle and use WP's, we would do it here.
