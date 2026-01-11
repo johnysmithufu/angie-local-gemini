@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GeminiClient, Message } from './GeminiClient';
 import { MCPOrchestrator } from '../core/MCPOrchestrator';
-import { useChatPersistence } from './hooks/useChatPersistence';
-import { ErrorBoundary } from './ErrorBoundary';
+import { useChatPersistence } from './hooks/useChatPersistence'; // Use the hook we created
+import { ErrorBoundary } from './ErrorBoundary'; // Use the safety boundary
 import html2canvas from 'html2canvas';
 
 // Icons
@@ -76,7 +76,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ apiBaseUrl, nonce 
         }
     };
 
-    // 3. Standard Chat Handlers
+    // 3. Standard Chat Handlers (Voice, Vision, Submit)
     const toggleVoice = () => {
         const recognition = (window as any).recognition;
         if (!recognition) return alert("Voice not supported.");
@@ -89,19 +89,20 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ apiBaseUrl, nonce 
             const recognition = new (window as any).webkitSpeechRecognition();
             recognition.continuous = false;
             recognition.interimResults = false;
+
             recognition.onresult = (event: any) => {
                 const transcript = event.results[0][0].transcript;
                 setInput(prev => prev + " " + transcript);
                 setIsListening(false);
             };
+
             (window as any).recognition = recognition;
         }
     }, []);
 
     const takeScreenshot = async () => {
         try {
-            // Updated to ignore the new floating window class
-            const canvas = await html2canvas(document.body, { ignoreElements: (el) => el.classList.contains('angie-floating-window') });
+            const canvas = await html2canvas(document.body, { ignoreElements: (el) => el.id === 'angie-chat-root' });
             setCapturedImage(canvas.toDataURL('image/jpeg', 0.6));
         } catch (e) { console.error(e); }
     };
@@ -116,6 +117,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ apiBaseUrl, nonce 
         setCapturedImage(null);
         setIsStreaming(true);
 
+        // Optimistic UI
         setMessages(prev => [...prev, { role: 'model', content: '' }]);
 
         try {
@@ -123,7 +125,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ apiBaseUrl, nonce 
             let fullResponse = "";
 
             await clientRef.current.generateContentStream(
-                messages,
+                messages, // Pass history correctly
                 userMsg.content,
                 userMsg.images,
                 tools,
@@ -143,91 +145,86 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ apiBaseUrl, nonce 
         }
     };
 
-    // 4. Render Settings Mode
+    // 4. Render
     if (showSettings || !isConfigured) {
         return (
-            <div className="angie-floating-window angie-settings-mode">
-                <div className="angie-settings-container">
-                    <h2 className="angie-settings-title">
-                        <Settings size={20} /> Setup Angie
-                    </h2>
-                    <p className="angie-settings-desc">
-                        Enter your Google Gemini API Key to enable the assistant.
-                    </p>
-                    <input
-                        type="password"
-                        value={apiKey}
-                        onChange={(e) => setApiKey(e.target.value)}
-                        placeholder="sk-..."
-                        className="angie-settings-input"
-                    />
-                    <button
-                        onClick={handleSaveSettings}
-                        className="angie-save-btn"
-                    >
-                        <Save size={16} /> Save & Connect
-                    </button>
-                </div>
+            <div id="angie-chat-root" className="fixed bottom-4 right-4 w-96 bg-white shadow-2xl rounded-xl border border-gray-200 z-50 p-6 font-sans">
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <Settings size={20} /> Setup Angie
+                </h2>
+                <p className="text-sm text-gray-600 mb-4">
+                    Enter your Google Gemini API Key to enable the assistant.
+                </p>
+                <input
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="sk-..."
+                    className="w-full p-2 border rounded mb-4"
+                />
+                <button
+                    onClick={handleSaveSettings}
+                    className="w-full bg-blue-600 text-white p-2 rounded flex justify-center items-center gap-2 hover:bg-blue-700"
+                >
+                    <Save size={16} /> Save & Connect
+                </button>
             </div>
         );
     }
 
-    // 5. Render Chat Mode
     return (
         <ErrorBoundary>
-            <div className="angie-floating-window">
+            <div id="angie-chat-root" className="fixed bottom-4 right-4 w-96 h-[600px] bg-white shadow-2xl rounded-xl flex flex-col border border-gray-200 z-50 font-sans">
                 {/* Header */}
-                <div className="angie-header">
-                    <div className="angie-title">
-                        <span className="angie-status-dot"></span>
-                        <h3>Angie V2</h3>
+                <div className="p-4 bg-slate-900 text-white rounded-t-xl flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                        <h3 className="font-bold">Angie V2</h3>
                     </div>
-                    <div className="angie-header-actions">
-                        <button onClick={clearMemory} title="Clear Memory" className="angie-icon-btn"><Trash2 size={16}/></button>
-                        <button onClick={() => setShowSettings(true)} className="angie-icon-btn"><Settings size={16}/></button>
+                    <div className="flex gap-2">
+                        <button onClick={clearMemory} title="Clear Memory" className="text-slate-400 hover:text-white"><Trash2 size={16}/></button>
+                        <button onClick={() => setShowSettings(true)} className="text-slate-400 hover:text-white"><Settings size={16}/></button>
                     </div>
                 </div>
 
                 {/* Messages */}
-                <div className="angie-messages">
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
                     {messages.map((msg, idx) => (
-                        <div key={idx} className={`angie-message-row ${msg.role}`}>
-                            <div className={`angie-bubble ${msg.role}`}>
+                        <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[85%] p-3 rounded-lg text-sm shadow-sm ${
+                                msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-white text-slate-800 border'
+                            }`}>
                                 {msg.images && <div className="mb-2 text-xs opacity-75">[Image Attached]</div>}
                                 <div className="whitespace-pre-wrap">{msg.content}</div>
                             </div>
                         </div>
                     ))}
-                    {isStreaming && (
-                        <div className="angie-message-row model">
-                            <span className="text-xs text-gray-400">Thinking...</span>
-                        </div>
-                    )}
+                    {isStreaming && <div className="flex justify-start"><span className="bg-gray-200 text-gray-500 text-xs px-2 py-1 rounded-full animate-pulse">Thinking...</span></div>}
                     <div ref={messagesEndRef} />
                 </div>
 
                 {/* Screenshot Preview */}
                 {capturedImage && (
-                    <div className="angie-image-preview">
-                        <span>Image ready</span>
-                        <button onClick={() => setCapturedImage(null)} style={{color:'#ef4444', border:'none', background:'none', cursor:'pointer'}}><X size={14}/></button>
+                    <div className="p-2 bg-slate-100 border-t flex justify-between items-center px-4">
+                        <span className="text-xs text-slate-500">Image ready</span>
+                        <button onClick={() => setCapturedImage(null)} className="text-red-500 text-xs"><X size={14}/></button>
                     </div>
                 )}
 
                 {/* Input */}
-                <form onSubmit={handleSubmit} className="angie-input-area">
-                    <div className="angie-input-wrapper">
-                        <button type="button" onClick={takeScreenshot} className="angie-action-btn" title="Screenshot"><Camera size={20} /></button>
-                        <button type="button" onClick={toggleVoice} className={`angie-action-btn ${isListening ? 'active' : ''}`} title="Voice"><Mic size={20} /></button>
+                <form onSubmit={handleSubmit} className="p-4 border-t bg-white rounded-b-xl">
+                    <div className="flex gap-2">
+                        <button type="button" onClick={takeScreenshot} className="p-2 text-slate-500 hover:text-blue-600"><Camera size={20} /></button>
+                        <button type="button" onClick={toggleVoice} className={`p-2 ${isListening ? 'text-red-500 animate-pulse' : 'text-slate-500'}`}><Mic size={20} /></button>
                         <input
                             type="text"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             placeholder="Ask Angie..."
-                            className="angie-text-input"
+                            className="flex-1 border-0 focus:ring-0 text-sm bg-transparent outline-none"
                         />
-                        <button type="submit" disabled={isStreaming} className="angie-action-btn angie-send-btn">
-                            {isStreaming ? <Loader size={20} className="angie-loading-spinner" /> : <Send size={20} />}
+                        <button type="submit" disabled={isStreaming} className="p-2 text-blue-600 disabled:opacity-50">
+                            {isStreaming ? <Loader size={20} className="animate-spin" /> : <Send size={20} />}
                         </button>
                     </div>
                 </form>

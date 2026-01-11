@@ -14,10 +14,6 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        assetFileNames: (assetInfo) => {
-          if (assetInfo.name === 'style.css') return 'angie-demo.css';
-          return assetInfo.name;
-        },
         globals: {
            // If we need to exclude react from bundle and use WP's, we would do it here.
            // But package.json has react as dependency, not devDependency/peer.
