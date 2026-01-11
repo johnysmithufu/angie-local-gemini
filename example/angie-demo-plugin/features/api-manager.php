@@ -27,7 +27,6 @@ class ApiManager {
             'permission_callback' => function() { return current_user_can('manage_options'); },
         ]);
 
-        // Legacy fallback save (optional, for the chat UI settings)
         register_rest_route('angie/v1', '/config/save', [
             'methods' => 'POST',
             'callback' => [$this, 'handle_save_config'],
@@ -35,16 +34,10 @@ class ApiManager {
         ]);
     }
 
-    /**
-     * Helper to get the best available API Key
-     */
     private function get_active_api_key() {
         $user_id = get_current_user_id();
-        // 1. Check User Profile Key
         $user_key = get_user_meta($user_id, 'angie_api_key', true);
         if (!empty($user_key)) return $user_key;
-
-        // 2. Check Global Key (Fallback)
         return get_option('angie_gemini_api_key');
     }
 
@@ -52,12 +45,10 @@ class ApiManager {
         if (!current_user_can('manage_options')) {
             return new \WP_Error('rest_forbidden', 'Only admins can use Angie.', ['status' => 403]);
         }
-        // ... (Rate limiting logic unchanged) ...
         return true;
     }
 
     public function handle_check_config() {
-        // Return true if EITHER key exists
         return [
             'has_key' => !empty($this->get_active_api_key())
         ];
@@ -67,7 +58,6 @@ class ApiManager {
         $params = $request->get_json_params();
         if (empty($params['api_key'])) return new \WP_Error('missing_key', 'Key required', ['status' => 400]);
 
-        // Save to User Meta by default now, for better privacy
         update_user_meta(get_current_user_id(), 'angie_api_key', sanitize_text_field($params['api_key']));
         return ['success' => true];
     }
@@ -79,11 +69,8 @@ class ApiManager {
              return new \WP_Error('no_key', 'API Key not configured in User Profile', ['status' => 500]);
         }
 
-        // ... (Rest of the streaming logic remains the same) ...
-        // 1. Prepare Google API Request
         $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:streamGenerateContent?key=' . $api_key;
 
-        // 2. Setup Headers for SSE
         header('Content-Type: text/event-stream');
         header('Cache-Control: no-cache');
         header('Connection: keep-alive');
@@ -91,7 +78,6 @@ class ApiManager {
 
         $params = $request->get_json_params();
 
-        // Transform messages for Google format (Same logic as before)
         $contents = [];
         $system_instruction = null;
 
@@ -125,7 +111,6 @@ class ApiManager {
              $google_payload['tools'] = [['function_declarations' => $funcs]];
         }
 
-        // 3. Execute cURL
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($google_payload));
