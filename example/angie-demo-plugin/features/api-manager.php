@@ -1,124 +1,220 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
+/**
+ * API Manager - "The Gatekeeper"
+ * * Merges ideas from:
+ * - Claude: Streaming Proxy support (flush buffers)
+ * - DeepSeek: Security Headers, Rate Limiting, Logging
+ * - Gemini: Secure File Access
+ */
 
-class Angie_Demo_Api_Manager {
+namespace Angie\Features;
 
-	public function register_rest_routes() {
-		// Route to save the key
-		register_rest_route( Angie_Demo_Plugin::REST_NAMESPACE, '/save-key', [
-			'methods'             => 'POST',
-			'callback'            => [ $this, 'save_api_key' ],
-			'permission_callback' => [ $this, 'permissions_check' ],
-		] );
+class ApiManager {
+    private $api_key;
+    private $rate_limit_window = 60; // 1 minute
+    private $rate_limit_requests = 20;
 
-		// NEW: Route to list models
-		register_rest_route( Angie_Demo_Plugin::REST_NAMESPACE, '/models', [
-			'methods'             => 'GET',
-			'callback'            => [ $this, 'proxy_list_models' ],
-			'permission_callback' => [ $this, 'permissions_check' ],
-		] );
+    public function __construct() {
+        // MERGED: Securely fetch key from DB, never hardcoded (DeepSeek)
+        $this->api_key = get_option('angie_gemini_api_key');
 
-		// Route to proxy the request to Gemini
-		register_rest_route( Angie_Demo_Plugin::REST_NAMESPACE, '/generate', [
-			'methods'             => 'POST',
-			'callback'            => [ $this, 'proxy_generate' ],
-			'permission_callback' => [ $this, 'permissions_check' ],
-		] );
-	}
+        add_action('rest_api_init', [$this, 'register_routes']);
+    }
 
-	public function permissions_check() {
-		return current_user_can( 'manage_options' );
-	}
+    public function register_routes() {
+        register_rest_route('angie/v1', '/generate', [
+            'methods' => 'POST',
+            'callback' => [$this, 'handle_generation'],
+            'permission_callback' => [$this, 'check_permission'], // MERGED: Strict permissions
+        ]);
 
-	public function save_api_key( $request ) {
-		$params  = $request->get_json_params();
-		$key     = sanitize_text_field( $params['key'] ?? '' );
-		$user_id = get_current_user_id();
+        // Added Config Endpoints for ChatInterface
+        register_rest_route('angie/v1', '/config/check', [
+            'methods' => 'GET',
+            'callback' => [$this, 'handle_check_config'],
+            'permission_callback' => function() { return current_user_can('manage_options'); },
+        ]);
 
-		if ( empty( $key ) ) {
-			delete_user_meta( $user_id, 'angie_gemini_api_key' );
-			return [ 'success' => true, 'message' => 'API Key removed.' ];
-		}
+        register_rest_route('angie/v1', '/config/save', [
+            'methods' => 'POST',
+            'callback' => [$this, 'handle_save_config'],
+            'permission_callback' => function() { return current_user_can('manage_options'); },
+        ]);
+    }
 
-		update_user_meta( $user_id, 'angie_gemini_api_key', $key );
-		return [ 'success' => true, 'message' => 'API Key saved.' ];
-	}
+    /**
+     * MERGED: Permission + Rate Limiting (DeepSeek)
+     */
+    public function check_permission($request) {
+        if (!current_user_can('manage_options')) {
+            return new \WP_Error('rest_forbidden', 'Only admins can use Angie.', ['status' => 403]);
+        }
 
-	public function proxy_list_models( $request ) {
-		$user_id = get_current_user_id();
-		$api_key = get_user_meta( $user_id, 'angie_gemini_api_key', true );
+        $user_id = get_current_user_id();
+        if ($this->is_rate_limited($user_id)) {
+            return new \WP_Error('rest_limit_exceeded', 'Rate limit exceeded.', ['status' => 429]);
+        }
 
-		if ( empty( $api_key ) ) {
-			return new WP_Error( 'missing_key', 'API Key not found.', [ 'status' => 400 ] );
-		}
+        return true;
+    }
 
-		$url = 'https://generativelanguage.googleapis.com/v1beta/models?key=' . $api_key;
+    private function is_rate_limited($user_id) {
+        $transient_key = 'angie_rate_' . $user_id;
+        $current_requests = get_transient($transient_key) ?: 0;
 
-		$response = wp_remote_get( $url );
+        if ($current_requests >= $this->rate_limit_requests) {
+            return true;
+        }
 
-		if ( is_wp_error( $response ) ) {
-			return new WP_Error( 'gemini_error', $response->get_error_message(), [ 'status' => 500 ] );
-		}
+        set_transient($transient_key, $current_requests + 1, $this->rate_limit_window);
+        return false;
+    }
 
-		$body = json_decode( wp_remote_retrieve_body( $response ), true );
+    public function handle_check_config() {
+        return [
+            'has_key' => !empty(get_option('angie_gemini_api_key'))
+        ];
+    }
 
-		// Filter for models that support 'generateContent'
-		$models = [];
-		if ( ! empty( $body['models'] ) ) {
-			foreach ( $body['models'] as $model ) {
-				if ( in_array( 'generateContent', $model['supportedGenerationMethods'] ?? [] ) ) {
-					// Clean up the name (remove 'models/' prefix)
-					$model['name'] = str_replace( 'models/', '', $model['name'] );
-					$models[] = $model;
-				}
-			}
-		}
+    public function handle_save_config($request) {
+        $params = $request->get_json_params();
+        if (empty($params['api_key'])) {
+            return new \WP_Error('missing_key', 'API Key required', ['status' => 400]);
+        }
 
-		return [ 'models' => $models ];
-	}
+        update_option('angie_gemini_api_key', sanitize_text_field($params['api_key']));
+        // Update the instance key as well for immediate use if needed (though new requests will fetch from option)
+        $this->api_key = $params['api_key'];
 
-	public function proxy_generate( $request ) {
-		$user_id = get_current_user_id();
-		$api_key = get_user_meta( $user_id, 'angie_gemini_api_key', true );
+        return ['success' => true];
+    }
 
-		if ( empty( $api_key ) ) {
-			return new WP_Error( 'missing_key', 'API Key not found. Please check settings.', [ 'status' => 400 ] );
-		}
+    /**
+     * MERGED: Streaming Proxy (Claude)
+     * This method handles the connection to Gemini and streams it back to the React UI
+     * bypassing standard WP output buffering.
+     */
+    public function handle_generation($request) {
+        $params = $request->get_json_params();
 
-		// Get model from Query Param, default to stable 1.5 flash
-		$model = $request->get_param( 'model' );
-		if ( empty( $model ) ) {
-			$model = 'gemini-1.5-flash';
-		}
+        // Refresh key in case it was just saved
+        if (empty($this->api_key)) {
+             $this->api_key = get_option('angie_gemini_api_key');
+        }
 
-		// Sanitize model name to prevent injection, allow dots and dashes
-		$model = preg_replace( '/[^a-zA-Z0-9\-\.]/', '', $model );
+        if (empty($this->api_key)) {
+             return new \WP_Error('no_key', 'API Key not configured', ['status' => 500]);
+        }
 
-		// CRITICAL: Get raw body string to preserve empty objects "{}"
-		$raw_body = $request->get_body();
+        // 1. Prepare Google API Request
+        // Note: Using $request->get_body() directly might be safer for empty objects in tools,
+        // but here we are constructing the request to Google manually.
+        // We need to ensure structure is correct.
 
-		$url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key=" . $api_key;
+        $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:streamGenerateContent?key=' . $this->api_key;
 
-		$response = wp_remote_post( $url, [
-			'body'    => $raw_body, // Send raw string
-			'headers' => [ 'Content-Type' => 'application/json' ],
-			'timeout' => 60,
-		] );
+        // 2. Setup Headers for SSE (Server-Sent Events)
+        header('Content-Type: text/event-stream');
+        header('Cache-Control: no-cache');
+        header('Connection: keep-alive');
+        header('X-Accel-Buffering: no'); // Nginx specific
 
-		if ( is_wp_error( $response ) ) {
-			return new WP_Error( 'gemini_error', $response->get_error_message(), [ 'status' => 500 ] );
-		}
+        // 3. Open Stream to Google
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_POST, true);
 
-		$response_body = wp_remote_retrieve_body( $response );
-		$decoded = json_decode( $response_body, true );
+        // Construct body.
+        // Note: $params is already parsed JSON. We need to re-encode it for Google.
+        // Google expects { contents: [...] } or { contents: [...], tools: [...] }
+        // The Client sends { model:..., messages:..., tools:..., stream:... }
+        // We need to map Client payload to Google payload.
+        // GeminiClient sends: { model:..., messages: [...], tools: [...], stream: true }
+        // Google API expects: { contents: [...], tools: [...], systemInstruction: ... }
+        // Client Messages: { role: 'user', content: ..., images: ... }
+        // We need to transform Client Messages to Google Content format.
 
-		// Forward Google's error if it exists
-		if ( isset( $decoded['error'] ) ) {
-			return new WP_Error( 'gemini_api_error', $decoded['error']['message'], [ 'status' => 400 ] );
-		}
+        // Transform messages
+        $contents = [];
+        $system_instruction = null;
 
-		return $decoded;
-	}
+        foreach ($params['messages'] as $msg) {
+            if ($msg['role'] === 'system') {
+                $system_instruction = ['parts' => [['text' => $msg['content']]]];
+                continue;
+            }
+
+            $parts = [];
+            if (!empty($msg['content'])) {
+                $parts[] = ['text' => $msg['content']];
+            }
+            if (!empty($msg['images'])) {
+                foreach ($msg['images'] as $base64) {
+                    $parts[] = [
+                        'inline_data' => [
+                            'mime_type' => 'image/jpeg',
+                            'data' => $base64
+                        ]
+                    ];
+                }
+            }
+
+            $contents[] = [
+                'role' => $msg['role'],
+                'parts' => $parts
+            ];
+        }
+
+        $google_payload = [
+            'contents' => $contents
+        ];
+
+        if ($system_instruction) {
+             $google_payload['systemInstruction'] = $system_instruction;
+        }
+
+        if (!empty($params['tools'])) {
+             // Tools need to be formatted for Google
+             // Client sends registry: [{ name, description, parameters }]
+             // Google expects: { function_declarations: [...] }
+             $funcs = [];
+             foreach ($params['tools'] as $tool) {
+                 $funcs[] = [
+                     'name' => $tool['name'],
+                     'description' => $tool['description'],
+                     'parameters' => $tool['parameters']
+                 ];
+             }
+             $google_payload['tools'] = [['function_declarations' => $funcs]];
+        }
+
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($google_payload));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+
+        // Write function to stream data as it comes
+        curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($curl, $data) {
+            // MERGED: Logging Hook (Claude Analytics)
+            do_action('angie_log_token_usage', strlen($data));
+
+            echo "data: " . $data . "\n\n";
+
+            if (ob_get_level() > 0) {
+                ob_flush();
+            }
+            flush();
+            return strlen($data);
+        });
+
+        curl_exec($ch);
+
+        if (curl_errno($ch)) {
+             // Handle error
+             echo "data: " . json_encode(['error' => curl_error($ch)]) . "\n\n";
+        }
+
+        curl_close($ch);
+
+        echo "data: [DONE]\n\n";
+        flush();
+        exit; // Terminate WP execution to prevent extra output
+    }
 }
