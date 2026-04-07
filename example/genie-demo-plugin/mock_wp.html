@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Angie V2 - Verification</title>
+    <title>Genie V2 - Verification</title>
     <script>
         // Mock WP Localized Data
-        window.angieConfig = {
+        window.genieConfig = {
             apiBaseUrl: 'http://localhost:8000',
             nonce: 'mock-nonce'
         };
@@ -17,12 +17,12 @@
             const url = args[0];
 
             // Mock config check (assume configured)
-            if (url.includes('/angie/v1/config/check')) {
+            if (url.includes('/genie/v1/config/check')) {
                 return new Response(JSON.stringify({ has_key: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });
             }
 
             // Mock models endpoint
-            if (url.includes('/angie/v1/models')) {
+            if (url.includes('/genie/v1/models')) {
                 const mockModels = {
                     models: [
                         { name: 'models/gemini-2.5-flash', displayName: 'Gemini 2.5 Flash', supportedGenerationMethods: ['generateContent'] },
@@ -40,11 +40,11 @@
         body { font-family: sans-serif; background: #f0f0f1; margin: 0; padding: 20px; }
         /* Include compiled CSS */
     </style>
-    <link rel="stylesheet" href="out/angie-demo.css">
+    <link rel="stylesheet" href="out/genie-demo.css">
 </head>
 <body>
-    <div id="angie-local-root"></div>
+    <div id="genie-local-root"></div>
     <!-- Include compiled JS -->
-    <script src="out/angie-demo.js"></script>
+    <script src="out/genie-demo.js"></script>
 </body>
 </html>

@@ -1,12 +1,12 @@
 import { z } from 'zod';
-import { AngieTool } from '../types';
+import { GenieTool } from '../types';
 
 /**
-* Standard Tools for Angie V2
+* Standard Tools for Genie V2
 * Migrated from original demo-mcp-server.ts
 */
 
-export const analyzePageSeo: AngieTool = {
+export const analyzePageSeo: GenieTool = {
     name: 'analyze_page_seo',
     description: 'Analyzes the SEO of the current page content or a specific text.',
     schema: z.object({
@@ -29,7 +29,7 @@ export const analyzePageSeo: AngieTool = {
     }
 };
 
-export const managePostTypes: AngieTool = {
+export const managePostTypes: GenieTool = {
     name: 'manage_post_types',
     description: 'Lists all registered post types on this WordPress site.',
     schema: z.object({}),
@@ -42,7 +42,7 @@ export const managePostTypes: AngieTool = {
     }
 };
 
-export const securityCheck: AngieTool = {
+export const securityCheck: GenieTool = {
     name: 'security_check',
     description: 'Performs a basic security audit of the site configuration.',
     schema: z.object({
@@ -60,7 +60,7 @@ export const securityCheck: AngieTool = {
     }
 };
 
-export const runFireworks: AngieTool = {
+export const runFireworks: GenieTool = {
     name: 'run_fireworks',
     description: 'Triggers a visual celebration on the screen.',
     schema: z.object({}),

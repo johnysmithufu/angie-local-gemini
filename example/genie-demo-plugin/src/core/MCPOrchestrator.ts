@@ -1,17 +1,17 @@
 import { z } from 'zod';
-import { AngieTool } from './types';
+import { GenieTool } from './types';
 import { analyzePageSeo, managePostTypes, securityCheck, runFireworks } from './tools/StandardTools';
 
-export type { AngieTool };
+export type { GenieTool };
 
 export class MCPOrchestrator {
-    private tools: Map<string, AngieTool> = new Map();
+    private tools: Map<string, GenieTool> = new Map();
 
     constructor() {
         this.registerDefaultTools();
     }
 
-    registerTool(tool: AngieTool) {
+    registerTool(tool: GenieTool) {
         this.tools.set(tool.name, { ...tool, isEnabled: true });
     }
 

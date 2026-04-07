@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export interface AngieTool {
+export interface GenieTool {
     name: string;
     description: string;
     schema: z.ZodObject<any>;

@@ -12,7 +12,7 @@ export function useChatPersistence(key: string, initialValue: Message[]) {
             const item = window.localStorage.getItem(key);
             return item ? JSON.parse(item) : initialValue;
         } catch (error) {
-            console.warn("Angie: Failed to load history", error);
+            console.warn("Genie: Failed to load history", error);
             return initialValue;
         }
     });
@@ -22,7 +22,7 @@ export function useChatPersistence(key: string, initialValue: Message[]) {
         try {
             window.localStorage.setItem(key, JSON.stringify(messages));
         } catch (error) {
-            console.warn("Angie: Failed to save history", error);
+            console.warn("Genie: Failed to save history", error);
         }
     }, [key, messages]);
 

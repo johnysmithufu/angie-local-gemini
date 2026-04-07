@@ -6,7 +6,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 import html2canvas from 'html2canvas';
 
 // Icons
-import { Mic, MicOff, Camera, Send, Loader, Settings, Save, X, Trash2, ChevronDown } from 'lucide-react';
+import { Mic, MicOff, Camera, Send, Loader, Settings, Save, X, Trash2, ChevronDown, Minus, MessageCircle } from 'lucide-react';
 
 interface ChatInterfaceProps {
     apiBaseUrl: string;
@@ -18,9 +18,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ apiBaseUrl, nonce 
     const [apiKey, setApiKey] = useState<string>('');
     const [isConfigured, setIsConfigured] = useState<boolean>(false);
     const [showSettings, setShowSettings] = useState<boolean>(false);
+    const [isMinimized, setIsMinimized] = useState<boolean>(false);
 
     // Chat State
-    const { messages, setMessages, clearMemory } = useChatPersistence('angie_v2_history', []);
+    const { messages, setMessages, clearMemory } = useChatPersistence('genie_v2_history', []);
     const [input, setInput] = useState('');
     const [isStreaming, setIsStreaming] = useState(false);
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
@@ -29,7 +30,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ apiBaseUrl, nonce 
     // Model Selection State
     const [models, setModels] = useState<any[]>([]);
     const [selectedModel, setSelectedModel] = useState<string>(() => {
-        return localStorage.getItem('angie_v2_selected_model') || 'gemini-2.5-flash-lite';
+        return localStorage.getItem('genie_v2_selected_model') || 'gemini-2.5-flash-lite';
     });
 
     // Refs
@@ -44,7 +45,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ apiBaseUrl, nonce 
 
     const checkConfiguration = async () => {
         try {
-            const res = await fetch(`${apiBaseUrl}/angie/v1/config/check`, {
+            const res = await fetch(`${apiBaseUrl}/genie/v1/config/check`, {
                 headers: { 'X-WP-Nonce': nonce }
             });
             const data = await res.json();
@@ -63,7 +64,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ apiBaseUrl, nonce 
 
     const fetchModels = async () => {
         try {
-            const res = await fetch(`${apiBaseUrl}/angie/v1/models`, {
+            const res = await fetch(`${apiBaseUrl}/genie/v1/models`, {
                 headers: { 'X-WP-Nonce': nonce }
             });
             if (res.ok) {
@@ -80,7 +81,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ apiBaseUrl, nonce 
     const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const val = e.target.value;
         setSelectedModel(val);
-        localStorage.setItem('angie_v2_selected_model', val);
+        localStorage.setItem('genie_v2_selected_model', val);
     };
 
     // 2. Save Settings Handler - IMPROVED ERROR HANDLING
@@ -91,7 +92,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ apiBaseUrl, nonce 
         }
 
         try {
-            const res = await fetch(`${apiBaseUrl}/angie/v1/config/save`, {
+            const res = await fetch(`${apiBaseUrl}/genie/v1/config/save`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
                 body: JSON.stringify({ api_key: apiKey })
@@ -139,7 +140,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ apiBaseUrl, nonce 
 
     const takeScreenshot = async () => {
         try {
-            const canvas = await html2canvas(document.body, { ignoreElements: (el) => el.classList.contains('angie-floating-window') });
+            const canvas = await html2canvas(document.body, { ignoreElements: (el) => el.classList.contains('genie-floating-window') });
             setCapturedImage(canvas.toDataURL('image/jpeg', 0.6));
         } catch (e) { console.error(e); }
     };
@@ -185,12 +186,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ apiBaseUrl, nonce 
     // 4. Render Settings Mode
     if (showSettings || !isConfigured) {
         return (
-            <div className="angie-floating-window angie-settings-mode">
-                <div className="angie-settings-container">
-                    <h2 className="angie-settings-title">
-                        <Settings size={20} /> Setup Angie
+            <div className={`genie-floating-window genie-settings-mode ${isMinimized ? 'minimized' : ''}`}>
+                <div className="genie-settings-container">
+                    <h2 className="genie-settings-title">
+                        <Settings size={20} /> Setup Genie
                     </h2>
-                    <p className="angie-settings-desc">
+                    <p className="genie-settings-desc">
                         Enter your Google Gemini API Key to enable the assistant.
                     </p>
                     <input
@@ -198,11 +199,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ apiBaseUrl, nonce 
                         value={apiKey}
                         onChange={(e) => setApiKey(e.target.value)}
                         placeholder="sk-..."
-                        className="angie-settings-input"
+                        className="genie-settings-input"
                     />
                     <button
                         onClick={handleSaveSettings}
-                        className="angie-save-btn"
+                        className="genie-save-btn"
                     >
                         <Save size={16} /> Save & Connect
                     </button>
@@ -214,14 +215,19 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ apiBaseUrl, nonce 
     // 5. Render Chat Mode
     return (
         <ErrorBoundary>
-            <div className="angie-floating-window">
+            {isMinimized && (
+                <div className="genie-fab" onClick={() => setIsMinimized(false)} title="Open Genie">
+                    <MessageCircle size={28} />
+                </div>
+            )}
+            <div className={`genie-floating-window ${isMinimized ? 'minimized' : ''}`}>
                 {/* Header */}
-                <div className="angie-header">
-                    <div className="angie-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span className="angie-status-dot"></span>
-                        <h3>Angie V2</h3>
+                <div className="genie-header">
+                    <div className="genie-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span className="genie-status-dot"></span>
+                        <h3>Genie V2</h3>
                         {models.length > 0 && (
-                            <div className="angie-model-selector" style={{ position: 'relative', marginLeft: '8px' }}>
+                            <div className="genie-model-selector" style={{ position: 'relative', marginLeft: '8px' }}>
                                 <select
                                     value={selectedModel}
                                     onChange={handleModelChange}
@@ -255,24 +261,25 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ apiBaseUrl, nonce 
                             </div>
                         )}
                     </div>
-                    <div className="angie-header-actions">
-                        <button onClick={clearMemory} title="Clear Memory" className="angie-icon-btn"><Trash2 size={16}/></button>
-                        <button onClick={() => setShowSettings(true)} className="angie-icon-btn"><Settings size={16}/></button>
+                    <div className="genie-header-actions">
+                        <button onClick={clearMemory} title="Clear Memory" className="genie-icon-btn"><Trash2 size={16}/></button>
+                        <button onClick={() => setShowSettings(true)} className="genie-icon-btn"><Settings size={16}/></button>
+                        <button onClick={() => setIsMinimized(true)} title="Minimize" className="genie-icon-btn"><Minus size={16}/></button>
                     </div>
                 </div>
 
                 {/* Messages */}
-                <div className="angie-messages">
+                <div className="genie-messages">
                     {messages.map((msg, idx) => (
-                        <div key={idx} className={`angie-message-row ${msg.role}`}>
-                            <div className={`angie-bubble ${msg.role}`}>
+                        <div key={idx} className={`genie-message-row ${msg.role}`}>
+                            <div className={`genie-bubble ${msg.role}`}>
                                 {msg.images && <div className="mb-2 text-xs opacity-75">[Image Attached]</div>}
                                 <div className="whitespace-pre-wrap">{msg.content}</div>
                             </div>
                         </div>
                     ))}
                     {isStreaming && (
-                        <div className="angie-message-row model">
+                        <div className="genie-message-row model">
                             <span className="text-xs text-gray-400">Thinking...</span>
                         </div>
                     )}
@@ -281,26 +288,26 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ apiBaseUrl, nonce 
 
                 {/* Screenshot Preview */}
                 {capturedImage && (
-                    <div className="angie-image-preview">
+                    <div className="genie-image-preview">
                         <span>Image ready</span>
                         <button onClick={() => setCapturedImage(null)} style={{color:'#ef4444', border:'none', background:'none', cursor:'pointer'}}><X size={14}/></button>
                     </div>
                 )}
 
                 {/* Input */}
-                <form onSubmit={handleSubmit} className="angie-input-area">
-                    <div className="angie-input-wrapper">
-                        <button type="button" onClick={takeScreenshot} className="angie-action-btn" title="Screenshot"><Camera size={20} /></button>
-                        <button type="button" onClick={toggleVoice} className={`angie-action-btn ${isListening ? 'active' : ''}`} title="Voice"><Mic size={20} /></button>
+                <form onSubmit={handleSubmit} className="genie-input-area">
+                    <div className="genie-input-wrapper">
+                        <button type="button" onClick={takeScreenshot} className="genie-action-btn" title="Screenshot"><Camera size={20} /></button>
+                        <button type="button" onClick={toggleVoice} className={`genie-action-btn ${isListening ? 'active' : ''}`} title="Voice"><Mic size={20} /></button>
                         <input
                             type="text"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            placeholder="Ask Angie..."
-                            className="angie-text-input"
+                            placeholder="Ask Genie..."
+                            className="genie-text-input"
                         />
-                        <button type="submit" disabled={isStreaming} className="angie-action-btn angie-send-btn">
-                            {isStreaming ? <Loader size={20} className="angie-loading-spinner" /> : <Send size={20} />}
+                        <button type="submit" disabled={isStreaming} className="genie-action-btn genie-send-btn">
+                            {isStreaming ? <Loader size={20} className="genie-loading-spinner" /> : <Send size={20} />}
                         </button>
                     </div>
                 </form>

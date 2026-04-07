@@ -1,27 +1,27 @@
 /**
- * Angie V2 Entry Point
+ * Genie V2 Entry Point
  * Replaces the old demo-mcp-server.ts
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { ChatInterface } from './local-sdk/ChatInterface';
-import './angie-styles.css'; // <--- IMPORT THE CSS FILE HERE
+import './genie-styles.css'; // <--- IMPORT THE CSS FILE HERE
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Create container if it doesn't exist
-    // Check for 'angie-local-root' which is output by the PHP footer hook
-    let container = document.getElementById('angie-local-root');
+    // Check for 'genie-local-root' which is output by the PHP footer hook
+    let container = document.getElementById('genie-local-root');
 
     if (!container) {
         // Fallback: create it and append to body
         container = document.createElement('div');
-        container.id = 'angie-local-root';
+        container.id = 'genie-local-root';
         document.body.appendChild(container);
     }
 
     // 2. Extract configuration from localized script data (set by PHP)
-    const config = (window as any).angieConfig || {
+    const config = (window as any).genieConfig || {
         apiBaseUrl: '/wp-json', // Fallback
         nonce: ''
     };
@@ -37,5 +37,5 @@ document.addEventListener('DOMContentLoaded', () => {
         </React.StrictMode>
     );
 
-    console.log("Angie V2 (Omni-Update) Loaded 🚀");
+    console.log("Genie V2 (Omni-Update) Loaded 🚀");
 });

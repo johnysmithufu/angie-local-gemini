@@ -2,14 +2,14 @@
 /**
  * Post Type Manager Feature
  * 
- * Handles post type registration and management functionality for the Angie Demo plugin
+ * Handles post type registration and management functionality for the Genie Demo plugin
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
 }
 
-class Angie_Demo_Post_Type_Manager {
+class Genie_Demo_Post_Type_Manager {
 
 	/**
 	 * Constructor
@@ -22,7 +22,7 @@ class Angie_Demo_Post_Type_Manager {
 	 * Register REST API routes for post type management
 	 */
 	public function register_rest_routes() {
-		register_rest_route( Angie_Demo_Plugin::REST_NAMESPACE, '/post-types', [
+		register_rest_route( Genie_Demo_Plugin::REST_NAMESPACE, '/post-types', [
 			'methods' => 'POST',
 			'callback' => [ $this, 'register_post_type' ],
 			'permission_callback' => [ $this, 'permissions_check' ],
@@ -167,7 +167,7 @@ class Angie_Demo_Post_Type_Manager {
 	 * Register all stored post types
 	 */
 	public function register_stored_post_types() {
-		$post_types = get_option( Angie_Demo_Plugin::POST_TYPES_OPTION, [] );
+		$post_types = get_option( Genie_Demo_Plugin::POST_TYPES_OPTION, [] );
 		foreach ( $post_types as $post_type => $config ) {
 			if ( ! post_type_exists( $post_type ) ) {
 				register_post_type( $post_type, $config );
@@ -181,7 +181,7 @@ class Angie_Demo_Post_Type_Manager {
 	 * @return array
 	 */
 	private function get_stored_post_types() {
-		return get_option( Angie_Demo_Plugin::POST_TYPES_OPTION, [] );
+		return get_option( Genie_Demo_Plugin::POST_TYPES_OPTION, [] );
 	}
 
 	/**
@@ -194,7 +194,7 @@ class Angie_Demo_Post_Type_Manager {
 	private function store_post_type_config( $post_type, $args ) {
 		$stored_post_types = $this->get_stored_post_types();
 		$stored_post_types[ $post_type ] = $args;
-		return update_option( Angie_Demo_Plugin::POST_TYPES_OPTION, $stored_post_types );
+		return update_option( Genie_Demo_Plugin::POST_TYPES_OPTION, $stored_post_types );
 	}
 
 	/**
@@ -207,7 +207,7 @@ class Angie_Demo_Post_Type_Manager {
 		$stored_post_types = $this->get_stored_post_types();
 		if ( isset( $stored_post_types[ $post_type ] ) ) {
 			unset( $stored_post_types[ $post_type ] );
-			return update_option( Angie_Demo_Plugin::POST_TYPES_OPTION, $stored_post_types );
+			return update_option( Genie_Demo_Plugin::POST_TYPES_OPTION, $stored_post_types );
 		}
 		return false;
 	}

@@ -4,7 +4,7 @@
 * Handles API Key retrieval from User Meta (Priority) or Global Option (Fallback).
 */
 
-namespace Angie\Features;
+namespace Genie\Features;
 
 class ApiManager {
     private $rate_limit_window = 60; // 1 minute
@@ -15,25 +15,25 @@ class ApiManager {
     }
 
     public function register_routes() {
-        register_rest_route('angie/v1', '/generate', [
+        register_rest_route('genie/v1', '/generate', [
             'methods' => 'POST',
             'callback' => [$this, 'handle_generation'],
             'permission_callback' => [$this, 'check_permission'],
         ]);
 
-        register_rest_route('angie/v1', '/config/check', [
+        register_rest_route('genie/v1', '/config/check', [
             'methods' => 'GET',
             'callback' => [$this, 'handle_check_config'],
             'permission_callback' => function() { return current_user_can('manage_options'); },
         ]);
 
-        register_rest_route('angie/v1', '/config/save', [
+        register_rest_route('genie/v1', '/config/save', [
             'methods' => 'POST',
             'callback' => [$this, 'handle_save_config'],
             'permission_callback' => function() { return current_user_can('manage_options'); },
         ]);
 
-        register_rest_route('angie/v1', '/models', [
+        register_rest_route('genie/v1', '/models', [
             'methods' => 'GET',
             'callback' => [$this, 'handle_get_models'],
             'permission_callback' => [$this, 'check_permission'],
@@ -42,14 +42,14 @@ class ApiManager {
 
     private function get_active_api_key() {
         $user_id = get_current_user_id();
-        $user_key = get_user_meta($user_id, 'angie_api_key', true);
+        $user_key = get_user_meta($user_id, 'genie_api_key', true);
         if (!empty($user_key)) return $user_key;
-        return get_option('angie_gemini_api_key');
+        return get_option('genie_gemini_api_key');
     }
 
     public function check_permission($request) {
         if (!current_user_can('manage_options')) {
-            return new \WP_Error('rest_forbidden', 'Only admins can use Angie.', ['status' => 403]);
+            return new \WP_Error('rest_forbidden', 'Only admins can use Genie.', ['status' => 403]);
         }
         return true;
     }
@@ -64,7 +64,7 @@ class ApiManager {
         $params = $request->get_json_params();
         if (empty($params['api_key'])) return new \WP_Error('missing_key', 'Key required', ['status' => 400]);
 
-        update_user_meta(get_current_user_id(), 'angie_api_key', sanitize_text_field($params['api_key']));
+        update_user_meta(get_current_user_id(), 'genie_api_key', sanitize_text_field($params['api_key']));
         return ['success' => true];
     }
 
@@ -150,7 +150,7 @@ class ApiManager {
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
 
         curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($curl, $data) {
-            do_action('angie_log_token_usage', strlen($data));
+            do_action('genie_log_token_usage', strlen($data));
             echo "data: " . $data . "\n\n";
             if (ob_get_level() > 0) ob_flush();
             flush();

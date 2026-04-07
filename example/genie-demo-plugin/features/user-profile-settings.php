@@ -1,10 +1,10 @@
 <?php
 /**
 * User Profile Settings
-* Adds an "Angie AI Settings" section to the WordPress User Profile page.
+* Adds an "Genie AI Settings" section to the WordPress User Profile page.
 */
 
-namespace Angie\Features;
+namespace Genie\Features;
 
 class UserProfileSettings {
 
@@ -19,16 +19,16 @@ class UserProfileSettings {
     public function render_profile_fields($user) {
         if (!current_user_can('manage_options')) return;
 
-        $api_key = get_user_meta($user->ID, 'angie_api_key', true);
+        $api_key = get_user_meta($user->ID, 'genie_api_key', true);
         ?>
-        <h3>Angie AI Settings</h3>
+        <h3>Genie AI Settings</h3>
         <table class="form-table">
             <tr>
-                <th><label for="angie_api_key">Google Gemini API Key</label></th>
+                <th><label for="genie_api_key">Google Gemini API Key</label></th>
                 <td>
-                    <input type="password" name="angie_api_key" id="angie_api_key" value="<?php echo esc_attr($api_key); ?>" class="regular-text" />
+                    <input type="password" name="genie_api_key" id="genie_api_key" value="<?php echo esc_attr($api_key); ?>" class="regular-text" />
                     <p class="description">
-                        Enter your Gemini API key here. It will be used for your interactions with Angie.
+                        Enter your Gemini API key here. It will be used for your interactions with Genie.
                         <br>
                         <a href="https://makersuite.google.com/app/apikey" target="_blank">Get a key from Google AI Studio</a>.
                     </p>
@@ -41,8 +41,8 @@ class UserProfileSettings {
     public function save_profile_fields($user_id) {
         if (!current_user_can('manage_options')) return;
 
-        if (isset($_POST['angie_api_key'])) {
-            update_user_meta($user_id, 'angie_api_key', sanitize_text_field($_POST['angie_api_key']));
+        if (isset($_POST['genie_api_key'])) {
+            update_user_meta($user_id, 'genie_api_key', sanitize_text_field($_POST['genie_api_key']));
         }
     }
 }

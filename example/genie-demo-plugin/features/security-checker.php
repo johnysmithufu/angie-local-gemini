@@ -2,14 +2,14 @@
 /**
  * Security Checker Feature
  * 
- * Handles security analysis functionality for the Angie Demo plugin
+ * Handles security analysis functionality for the Genie Demo plugin
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
 }
 
-class Angie_Demo_Security_Checker {
+class Genie_Demo_Security_Checker {
 
 	/**
 	 * Constructor
@@ -22,7 +22,7 @@ class Angie_Demo_Security_Checker {
 	 * Register REST API routes for security checking
 	 */
 	public function register_rest_routes() {
-		register_rest_route( Angie_Demo_Plugin::REST_NAMESPACE, '/security-check', [
+		register_rest_route( Genie_Demo_Plugin::REST_NAMESPACE, '/security-check', [
 			'methods' => 'POST',
 			'callback' => [ $this, 'security_check' ],
 			'permission_callback' => [ $this, 'permissions_check' ],

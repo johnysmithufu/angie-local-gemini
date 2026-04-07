@@ -1,28 +1,28 @@
 <?php
 /**
  * OMISSION FIX: Claude Suggestion - "Usage Tracking"
- * Implements the listener for the 'angie_log_token_usage' hook defined in api-manager.php.
+ * Implements the listener for the 'genie_log_token_usage' hook defined in api-manager.php.
  * Tracks estimated cost and usage per user.
  */
 
-namespace Angie\Features;
+namespace Genie\Features;
 
 class AnalyticsLogger {
     private $table_name;
 
     public function __construct() {
         global $wpdb;
-        $this->table_name = $wpdb->prefix . 'angie_analytics';
+        $this->table_name = $wpdb->prefix . 'genie_analytics';
 
         // Initialize DB on plugin activation (logic simplified for snippet)
         add_action('plugins_loaded', [$this, 'check_db_install']);
 
         // The Hook Listener
-        add_action('angie_log_token_usage', [$this, 'log_request'], 10, 1);
+        add_action('genie_log_token_usage', [$this, 'log_request'], 10, 1);
     }
 
     public function check_db_install() {
-        if (get_option('angie_analytics_db_version') !== '1.0') {
+        if (get_option('genie_analytics_db_version') !== '1.0') {
             $this->create_table();
         }
     }
@@ -44,7 +44,7 @@ class AnalyticsLogger {
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql);
 
-        update_option('angie_analytics_db_version', '1.0');
+        update_option('genie_analytics_db_version', '1.0');
     }
 
     /**

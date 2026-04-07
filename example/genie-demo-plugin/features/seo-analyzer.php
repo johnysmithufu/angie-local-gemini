@@ -2,14 +2,14 @@
 /**
  * SEO Analyzer Feature
  * 
- * Handles SEO analysis functionality for the Angie Demo plugin
+ * Handles SEO analysis functionality for the Genie Demo plugin
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
 }
 
-class Angie_Demo_SEO_Analyzer {
+class Genie_Demo_SEO_Analyzer {
 
 	/**
 	 * Constructor
@@ -22,7 +22,7 @@ class Angie_Demo_SEO_Analyzer {
 	 * Register REST API routes for SEO analysis
 	 */
 	public function register_rest_routes() {
-		register_rest_route( Angie_Demo_Plugin::REST_NAMESPACE, '/analyze-page-seo', [
+		register_rest_route( Genie_Demo_Plugin::REST_NAMESPACE, '/analyze-page-seo', [
 			'methods' => 'POST',
 			'callback' => [ $this, 'analyze_page_seo' ],
 			'permission_callback' => [ $this, 'permissions_check' ],
@@ -104,7 +104,7 @@ class Angie_Demo_SEO_Analyzer {
 
 		$response = \wp_remote_get( $url, [
 			'timeout' => 30,
-			'user-agent' => 'Angie Demo SEO Bot/1.0',
+			'user-agent' => 'Genie Demo SEO Bot/1.0',
 			'sslverify' => false,
 		] );
 

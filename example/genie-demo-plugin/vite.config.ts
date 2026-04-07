@@ -8,14 +8,14 @@ export default defineConfig({
     emptyOutDir: true,
     lib: {
       entry: './src/demo-mcp-server.tsx', // Updated entry point
-      name: 'AngieDemo',
-      fileName: () => 'angie-demo.js',
+      name: 'GenieDemo',
+      fileName: () => 'genie-demo.js',
       formats: ['iife'],
     },
     rollupOptions: {
       output: {
         assetFileNames: (assetInfo) => {
-          if (assetInfo.name === 'style.css') return 'angie-demo.css';
+          if (assetInfo.name === 'style.css') return 'genie-demo.css';
           return assetInfo.name;
         },
         globals: {

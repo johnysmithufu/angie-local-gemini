@@ -1,12 +1,12 @@
-# Angie Demo - Local AI Edition
+# Genie Demo - Local AI Edition
 
-A standalone, privacy-focused version of Angie that runs MCP tools locally using Google Gemini.
+A standalone, privacy-focused version of Genie that runs MCP tools locally using Google Gemini.
 
 ## Overview
 
-This plugin exposes tools through REST API endpoints that can be consumed by Angie's MCP gateway system. Users can interact with these tools through Angie's chat interface by asking questions like "please improve the SEO of this page".
+This plugin exposes tools through REST API endpoints that can be consumed by Genie's MCP gateway system. Users can interact with these tools through Genie's chat interface by asking questions like "please improve the SEO of this page".
 
-## Usage in Angie
+## Usage in Genie
 
 Once the plugin is active, users can:
 
@@ -39,7 +39,7 @@ Each of these examples demonstrates different WordPress tasks:
 
 1. **Clone and navigate to the demo plugin directory:**
    ```bash
-   cd example/angie-demo-plugin
+   cd example/genie-demo-plugin
    ```
 
 2. **Install dependencies:**

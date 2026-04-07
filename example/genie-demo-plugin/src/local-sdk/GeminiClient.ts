@@ -49,7 +49,7 @@ export class GeminiClient {
 
         try {
             // MERGED: Switch to fetch with ReadableStream for true streaming via PHP proxy
-            const response = await fetch(`${this.baseUrl}/angie/v1/generate`, {
+            const response = await fetch(`${this.baseUrl}/genie/v1/generate`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -65,6 +65,7 @@ export class GeminiClient {
             const reader = response.body?.getReader();
             const decoder = new TextDecoder();
             let fullText = "";
+            let buffer = ""; // New buffer for SSE chunks
 
             if (!reader) throw new Error("Browser does not support streaming");
 
@@ -75,34 +76,40 @@ export class GeminiClient {
                     break;
                 }
 
-                const chunk = decoder.decode(value);
+                const chunk = decoder.decode(value, { stream: true });
+                buffer += chunk;
+
                 // Parse Server-Sent Events (SSE) format
                 // PHP sends data like: "data: { ...JSON... }\n\n"
-                const lines = chunk.split('\n');
+                const parts = buffer.split('\n\n');
+                buffer = parts.pop() || ""; // Keep the last incomplete chunk in the buffer
 
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        try {
-                            const jsonStr = line.substring(6).trim();
-                            if (jsonStr === '[DONE]') continue;
+                for (const part of parts) {
+                    const lines = part.split('\n');
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const jsonStr = line.substring(6).trim();
+                                if (jsonStr === '[DONE]') continue;
 
-                            const data = JSON.parse(jsonStr);
+                                const data = JSON.parse(jsonStr);
 
-                            // Handle standard text content
-                            if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-                                const textChunk = data.candidates[0].content.parts[0].text;
-                                fullText += textChunk;
-                                onChunk(textChunk, false);
+                                // Handle standard text content
+                                if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                                    const textChunk = data.candidates[0].content.parts[0].text;
+                                    fullText += textChunk;
+                                    onChunk(textChunk, false);
+                                }
+
+                                // Handle function calls (buffered, not streamed usually, but handled here)
+                                if (data.candidates?.[0]?.content?.parts?.[0]?.functionCall) {
+                                    // For function calls, we usually wait for the full response,
+                                    // but we notify the UI that we are "Thinking/Calling"
+                                    onChunk(" [Executing Tool...] ", false);
+                                }
+                            } catch (e) {
+                                console.warn("Stream parse error", e);
                             }
-
-                            // Handle function calls (buffered, not streamed usually, but handled here)
-                            if (data.candidates?.[0]?.content?.parts?.[0]?.functionCall) {
-                                // For function calls, we usually wait for the full response,
-                                // but we notify the UI that we are "Thinking/Calling"
-                                onChunk(" [Executing Tool...] ", false);
-                            }
-                        } catch (e) {
-                            console.warn("Stream parse error", e);
                         }
                     }
                 }

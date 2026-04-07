@@ -1,7 +1,7 @@
 <?php
 /**
-* Plugin Name: Angie Demo - Local AI Edition
-* Description: A standalone, privacy-focused version of Angie that runs MCP tools locally using Google Gemini.
+* Plugin Name: Genie Demo - Local AI Edition
+* Description: A standalone, privacy-focused version of Genie that runs MCP tools locally using Google Gemini.
 * Version: 2.0.5
 * Author: Elementor.com
 * Plugin URI: https://elementor.com/
@@ -19,12 +19,12 @@ require_once plugin_dir_path( __FILE__ ) . 'features/user-profile-settings.php';
 require_once plugin_dir_path( __FILE__ ) . 'features/api-manager.php';
 require_once plugin_dir_path( __FILE__ ) . 'features/analytics-logger.php';
 
-class Angie_Demo_Plugin {
+class Genie_Demo_Plugin {
 
 const VERSION = '2.0.5';
-const REST_NAMESPACE = 'angie/v1';
+const REST_NAMESPACE = 'genie/v1';
 
-const POST_TYPES_OPTION = 'angie_demo_post_types';
+const POST_TYPES_OPTION = 'genie_demo_post_types';
 
 private $seo_analyzer;
 private $post_type_manager;
@@ -40,17 +40,17 @@ add_action( 'admin_footer', [ $this, 'render_app_root' ] );
 }
 
 private function load_features() {
-$this->seo_analyzer      = new Angie_Demo_SEO_Analyzer();
-$this->post_type_manager = new Angie_Demo_Post_Type_Manager();
-$this->security_checker  = new Angie_Demo_Security_Checker();
-$this->user_profile_settings = new Angie\Features\UserProfileSettings();
-$this->api_manager       = new Angie\Features\ApiManager();
+$this->seo_analyzer      = new Genie_Demo_SEO_Analyzer();
+$this->post_type_manager = new Genie_Demo_Post_Type_Manager();
+$this->security_checker  = new Genie_Demo_Security_Checker();
+$this->user_profile_settings = new Genie\Features\UserProfileSettings();
+$this->api_manager       = new Genie\Features\ApiManager();
 }
 
 public function render_app_root() {
 if ( current_user_can( 'manage_options' ) ) {
             // Unique container for React to mount into
-echo '<div id="angie-local-root"></div>';
+echo '<div id="genie-local-root"></div>';
 }
 }
 
@@ -59,20 +59,20 @@ if ( ! current_user_can( 'manage_options' ) ) {
 return;
 }
 
-$script_url = plugin_dir_url( __FILE__ ) . 'out/angie-demo.js';
+$script_url = plugin_dir_url( __FILE__ ) . 'out/genie-demo.js';
 
         // FIX: Ensure we look for the correct CSS file name (usually matches entry or generic style.css)
-        // We try 'angie-demo.css' first (Vite default for named entry), then fallback.
-        $style_url = file_exists( plugin_dir_path( __FILE__ ) . 'out/angie-demo.css' )
-            ? plugin_dir_url( __FILE__ ) . 'out/angie-demo.css'
+        // We try 'genie-demo.css' first (Vite default for named entry), then fallback.
+        $style_url = file_exists( plugin_dir_path( __FILE__ ) . 'out/genie-demo.css' )
+            ? plugin_dir_url( __FILE__ ) . 'out/genie-demo.css'
             : plugin_dir_url( __FILE__ ) . 'out/style.css';
 
-$ver = file_exists( plugin_dir_path( __FILE__ ) . 'out/angie-demo.js' )
-? filemtime( plugin_dir_path( __FILE__ ) . 'out/angie-demo.js' )
+$ver = file_exists( plugin_dir_path( __FILE__ ) . 'out/genie-demo.js' )
+? filemtime( plugin_dir_path( __FILE__ ) . 'out/genie-demo.js' )
 : self::VERSION;
 
 wp_enqueue_script(
-'angie-demo-local',
+'genie-demo-local',
 $script_url,
 [ 'wp-element', 'wp-api-fetch', 'wp-i18n' ],
 $ver,
@@ -80,9 +80,9 @@ true
 );
 
         // Enqueue CSS
-        if ( file_exists( plugin_dir_path( __FILE__ ) . 'out/angie-demo.css' ) || file_exists( plugin_dir_path( __FILE__ ) . 'out/style.css' ) ) {
+        if ( file_exists( plugin_dir_path( __FILE__ ) . 'out/genie-demo.css' ) || file_exists( plugin_dir_path( __FILE__ ) . 'out/style.css' ) ) {
             wp_enqueue_style(
-                'angie-demo-style',
+                'genie-demo-style',
                 $style_url,
                 [],
                 $ver
@@ -91,7 +91,7 @@ true
 
         // FIX: Remove trailing slash from rest_url() to prevent double-slash issues (//)
         // which can cause 301 redirects that strip POST data.
-wp_localize_script( 'angie-demo-local', 'angieConfig', [
+wp_localize_script( 'genie-demo-local', 'genieConfig', [
 'apiBaseUrl' => untrailingslashit( rest_url() ),
 'nonce'      => wp_create_nonce( 'wp_rest' ),
 ] );
@@ -104,4 +104,4 @@ $this->security_checker->register_rest_routes();
 }
 }
 
-new Angie_Demo_Plugin();
+new Genie_Demo_Plugin();

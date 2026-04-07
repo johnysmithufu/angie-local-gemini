@@ -24,14 +24,14 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Angie UI Crashed:', error, errorInfo);
+    console.error('Genie UI Crashed:', error, errorInfo);
   }
 
   public render() {
     if (this.state.hasError) {
       return (
         <div className="p-4 m-4 border border-red-200 bg-red-50 rounded-lg text-red-900 font-sans">
-          <h2 className="font-bold text-lg mb-2">Angie encountered an error.</h2>
+          <h2 className="font-bold text-lg mb-2">Genie encountered an error.</h2>
           <p className="text-sm mb-4">The assistant crashed, but your WordPress site is safe.</p>
           <div className="bg-white p-2 rounded border text-xs font-mono overflow-auto max-h-32 mb-4">
             {this.state.error?.toString()}
